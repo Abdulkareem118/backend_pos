@@ -11,6 +11,8 @@ const historyRoute = require('./Routes/HistoryRoute');
 const OrderTableRoute = require('./Routes/OrderTableRoute');
 const inventoryRoutes = require('./Routes/InventoryRoute');
 const orderRoutes = require('./Routes/OrderTableRoute');
+const shiftRoutes = require('./Routes/ShiftRoute');
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,6 +29,7 @@ app.use('/api/expensies', expensiesRoutes);
 app.use('/api/history', historyRoute);
 app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/shifts', shiftRoutes);
 
 
 

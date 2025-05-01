@@ -1,18 +1,45 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../Models/OrderTable');
+const Menu = require('../Models/menuItems');
+
+// Helper: Load menu from DB
+const getMenu = async () => {
+  return await Menu.find({});
+};
 
 // POST /api/orders - Create new order
 router.post('/', async (req, res) => {
   try {
-    const { tableNumber, itemId, quantity, menu } = req.body;
-    const item = menu.find(i => i._id === itemId);
-    if (!item) return res.status(400).json({ error: 'Invalid item ID' });
+    const { tableNumber, items } = req.body;
 
-    const totalPrice = item.price * quantity;
+    if (!tableNumber || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Invalid input: tableNumber or items missing' });
+    }
+
+    const menu = await getMenu();
+    let totalPrice = 0;
+    const processedItems = [];
+
+    for (const { itemId, quantity } of items) {
+      const item = menu.find(i => i._id.toString() === itemId);
+      if (!item) {
+        return res.status(400).json({ error: `Invalid item ID: ${itemId}` });
+      }
+
+      const itemTotal = item.price * quantity;
+      totalPrice += itemTotal;
+
+      processedItems.push({
+        itemName: item.name,
+        quantity,
+        totalPrice: itemTotal
+      });
+    }
+
     const order = new Order({
       tableNumber,
-      items: [{ itemName: item.name, quantity, totalPrice }],
+      items: processedItems,
       totalPrice
     });
 
@@ -23,7 +50,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/orders - Get all orders
+// GET /api/orders
 router.get('/', async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
@@ -33,7 +60,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /api/orders/:id/complete - Mark order as completed
+// PUT /api/orders/:id/complete
 router.put('/:id/complete', async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(
@@ -47,11 +74,13 @@ router.put('/:id/complete', async (req, res) => {
   }
 });
 
-// POST /api/orders/:id/add-item - Add item to existing order
+// POST /api/orders/:id/add-item
 router.post('/:id/add-item', async (req, res) => {
   try {
-    const { itemId, quantity, menu } = req.body;
-    const item = menu.find(i => i._id === itemId);
+    const { itemId, quantity } = req.body;
+
+    const menu = await getMenu();
+    const item = menu.find(i => i._id.toString() === itemId);
     if (!item) return res.status(400).json({ error: 'Invalid item ID' });
 
     const newItem = {
@@ -70,5 +99,7 @@ router.post('/:id/add-item', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 module.exports = router;
